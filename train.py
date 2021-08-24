@@ -134,7 +134,13 @@ def train(args, model, optimizer):
                         image + torch.rand_like(image) / n_bins
                     )
 
-                    continue
+                torch.save(
+                    model.state_dict(), f"checkpoint/model_{str(i + 1).zfill(6)}.pt"
+                )
+                torch.save(
+                    optimizer.state_dict(), f"checkpoint/optim_{str(i + 1).zfill(6)}.pt"
+                )
+                continue
 
             else:
                 log_p, logdet, _ = model(image + torch.rand_like(image) / n_bins)
@@ -154,7 +160,7 @@ def train(args, model, optimizer):
             )
 
             log = open(f'logs/log_0824.txt', 'a')
-            log.write(f'Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}\n')
+            log.write(f'Iter: {i+1:6d}; Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}\n')
             log.close()
 
             if i % 100 == 0:
