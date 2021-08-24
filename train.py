@@ -2,6 +2,7 @@ from tqdm import tqdm
 import numpy as np
 from PIL import Image
 from math import log, sqrt, pi
+import os
 
 import argparse
 
@@ -94,6 +95,18 @@ def calc_loss(log_p, logdet, image_size, n_bins):
 
 
 def train(args, model, optimizer):
+
+    # log
+    os.makedirs('logs', exist_ok=True)
+    log = open(f'logs/log_0824.txt', 'a')
+    log_args = '========== Options ==========\n'
+    args_var = vars(args)
+    for k, v in args_var.items():
+        log_args += f'{str(k)}: {str(v)}\n'
+    log_args += '=============================\n'
+    log.write(log_args)
+    log.close()
+
     dataset = iter(sample_data(args.path, args.batch, args.img_size))
     n_bins = 2.0 ** args.n_bits
 
@@ -139,6 +152,10 @@ def train(args, model, optimizer):
             pbar.set_description(
                 f"Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}"
             )
+
+            log = open(f'logs/log_0824.txt', 'a')
+            log.write(f'Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}\n')
+            log.close()
 
             if i % 100 == 0:
                 with torch.no_grad():
