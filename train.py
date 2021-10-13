@@ -36,8 +36,10 @@ parser.add_argument("--lr", default=1e-4, type=float, help="learning rate")
 parser.add_argument("--img_size", default=64, type=int, help="image size")
 parser.add_argument("--temp", default=0.7, type=float, help="temperature of sampling")
 parser.add_argument("--n_sample", default=20, type=int, help="number of samples")
-parser.add_argument("--logfile", default='log', type=int, help="logfile name")
 parser.add_argument("path", metavar="PATH", type=str, help="Path to image directory")
+
+parser.add_argument("--workdir", default='exp_test', type=int, help="workdir name")
+parser.add_argument("--logfile", default='log', type=int, help="logfile name")
 
 
 def sample_data(path, batch_size, image_size):
@@ -98,8 +100,8 @@ def calc_loss(log_p, logdet, image_size, n_bins):
 def train(args, model, optimizer):
 
     # log
-    os.makedirs('logs', exist_ok=True)
-    log = open(f'logs/{args.logfile}.txt', 'a')
+    os.makedirs(f'{args.workdir}/logs', exist_ok=True)
+    log = open(f'{args.workdir}logs/{args.logfile}.txt', 'a')
     log_args = '========== Options ==========\n'
     args_var = vars(args)
     for k, v in args_var.items():
@@ -136,10 +138,10 @@ def train(args, model, optimizer):
                     )
 
                 torch.save(
-                    model.state_dict(), f"checkpoint/model_{str(i + 1).zfill(6)}.pt"
+                    model.state_dict(), f"{args.workdir}/checkpoint/model_{str(i + 1).zfill(6)}.pt"
                 )
                 torch.save(
-                    optimizer.state_dict(), f"checkpoint/optim_{str(i + 1).zfill(6)}.pt"
+                    optimizer.state_dict(), f"{args.workdir}/checkpoint/optim_{str(i + 1).zfill(6)}.pt"
                 )
                 continue
 
@@ -160,7 +162,7 @@ def train(args, model, optimizer):
                 f"Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}"
             )
 
-            log = open(f'logs/{args.logfile}.txt', 'a')
+            log = open(f'{args.workdir}/logs/{args.logfile}.txt', 'a')
             log.write(f'Iter: {i+1:6d}; Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}\n')
             log.close()
 
@@ -176,10 +178,10 @@ def train(args, model, optimizer):
 
             if i % 1000 == 0:
                 torch.save(
-                    model.state_dict(), f"checkpoint/model_{str(i + 1).zfill(6)}.pt"
+                    model.state_dict(), f"{args.workdir}/checkpoint/model_{str(i + 1).zfill(6)}.pt"
                 )
                 torch.save(
-                    optimizer.state_dict(), f"checkpoint/optim_{str(i + 1).zfill(6)}.pt"
+                    optimizer.state_dict(), f"{args.workdir}/checkpoint/optim_{str(i + 1).zfill(6)}.pt"
                 )
 
 
