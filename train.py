@@ -136,6 +136,7 @@ def calc_loss(log_p, logdet, image_size, n_bins):
 def train(args, model, optimizer):
 
     # log
+    os.makedirs(f'{args.workdir}', exist_ok=True)
     os.makedirs(f'{args.workdir}/logs', exist_ok=True)
     log = open(f'{args.workdir}logs/{args.logfile}.txt', 'a')
     log_args = '========== Options ==========\n'
