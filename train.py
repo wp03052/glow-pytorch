@@ -12,11 +12,15 @@ from torch.autograd import Variable, grad
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms, utils
 
+from datasets import Dots
 from model import Glow
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser(description="Glow trainer")
+
+parser.add_argument("--dataset", default='dots', type=str, help="dataset name")
+
 parser.add_argument("--batch", default=16, type=int, help="batch size")
 parser.add_argument("--iter", default=200000, type=int, help="maximum iterations")
 parser.add_argument(
@@ -38,8 +42,8 @@ parser.add_argument("--temp", default=0.7, type=float, help="temperature of samp
 parser.add_argument("--n_sample", default=20, type=int, help="number of samples")
 parser.add_argument("path", metavar="PATH", type=str, help="Path to image directory")
 
-parser.add_argument("--workdir", default='exp_test', type=int, help="workdir name")
-parser.add_argument("--logfile", default='log', type=int, help="logfile name")
+parser.add_argument("--workdir", default='exp_test', type=str, help="workdir name")
+parser.add_argument("--logfile", default='log', type=str, help="logfile name")
 
 
 def sample_data(path, batch_size, image_size):
@@ -53,6 +57,38 @@ def sample_data(path, batch_size, image_size):
     )
 
     dataset = datasets.ImageFolder(path, transform=transform)
+    loader = DataLoader(dataset, shuffle=True, batch_size=batch_size, num_workers=4)
+    loader = iter(loader)
+
+    while True:
+        try:
+            yield next(loader)
+
+        except StopIteration:
+            loader = DataLoader(
+                dataset, shuffle=True, batch_size=batch_size, num_workers=4
+            )
+            loader = iter(loader)
+            yield next(loader)
+
+
+def sample_data_dots(path, batch_size, image_size):
+    imgs = []
+    labels = []
+    db_path = [os.path.join('data/dots/', '3_dots')]
+    db_files = [os.listdir(path) for path in db_path]
+    for db_file in db_files[0]:
+        filename = os.path.join(db_path[0], db_file)
+        img = np.load(filename)['images']
+        imgs.append(img)
+        labels.append(3*np.ones(shape=img.shape[0]))
+
+    train_imgs = np.concatenate(imgs[:-1])
+    train_imgs = torch.Tensor(train_imgs).permute(0, 3, 1, 2)
+    train_labels = np.concatenate(labels[:-1])
+    train_labels = torch.Tensor(train_labels)
+
+    dataset = Dots(train_imgs, train_labels, noisy=True, img_size=image_size)
     loader = DataLoader(dataset, shuffle=True, batch_size=batch_size, num_workers=4)
     loader = iter(loader)
 
@@ -110,7 +146,10 @@ def train(args, model, optimizer):
     log.write(log_args)
     log.close()
 
-    dataset = iter(sample_data(args.path, args.batch, args.img_size))
+    if args.dataset == 'dots':
+        dataset = iter(sample_data_dots(args.path, args.batch, args.img_size))
+    else:
+        dataset = iter(sample_data(args.path, args.batch, args.img_size))
     n_bins = 2.0 ** args.n_bits
 
     z_sample = []
