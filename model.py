@@ -370,3 +370,30 @@ class Glow(nn.Module):
                 input = block.reverse(input, z_list[-(i + 1)], reconstruct=reconstruct)
 
         return input
+
+
+    def z_outs_concat(self, z_list):
+
+        def _concat(input, eps, split):
+            if split:
+                unsqueezed = torch.cat([input, eps], 1)
+            else:
+                unsqueezed = input
+
+            b_size, n_channel, height, width = unsqueezed.shape
+
+            unsqueezed = unsqueezed.view(b_size, n_channel // 4, 2, 2, height, width)
+            unsqueezed = unsqueezed.permute(0, 1, 4, 2, 5, 3)
+            unsqueezed = unsqueezed.contiguous().view(
+                b_size, n_channel // 4, height * 2, width * 2
+            )
+
+            return unsqueezed
+
+        for i, block in enumerate(self.blocks[::-1]):
+            if i == 0:
+                output = _concat(z_list[-1], z_list[-1], split=block.split)
+            else:
+                output = _concat(output, z_list[-(i + 1)], split=block.split)
+
+        return output

@@ -36,6 +36,7 @@ parser.add_argument("--lr", default=1e-4, type=float, help="learning rate")
 parser.add_argument("--img_size", default=64, type=int, help="image size")
 parser.add_argument("--temp", default=0.7, type=float, help="temperature of sampling")
 parser.add_argument("--n_sample", default=20, type=int, help="number of samples")
+parser.add_argument("--logfile", default='log', type=int, help="logfile name")
 parser.add_argument("path", metavar="PATH", type=str, help="Path to image directory")
 
 
@@ -98,7 +99,7 @@ def train(args, model, optimizer):
 
     # log
     os.makedirs('logs', exist_ok=True)
-    log = open(f'logs/log_0824.txt', 'a')
+    log = open(f'logs/{args.logfile}.txt', 'a')
     log_args = '========== Options ==========\n'
     args_var = vars(args)
     for k, v in args_var.items():
@@ -159,7 +160,7 @@ def train(args, model, optimizer):
                 f"Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}"
             )
 
-            log = open(f'logs/log_0824.txt', 'a')
+            log = open(f'logs/{args.logfile}.txt', 'a')
             log.write(f'Iter: {i+1:6d}; Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}\n')
             log.close()
 
