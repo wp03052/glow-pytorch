@@ -42,7 +42,7 @@ parser.add_argument("--temp", default=0.7, type=float, help="temperature of samp
 parser.add_argument("--n_sample", default=20, type=int, help="number of samples")
 parser.add_argument("path", metavar="PATH", type=str, help="Path to image directory")
 
-parser.add_argument("--workdir", default='exp_test', type=str, help="workdir name")
+parser.add_argument("--workdir", default='results/exp_test', type=str, help="workdir name")
 parser.add_argument("--logfile", default='log', type=str, help="logfile name")
 
 
@@ -138,6 +138,7 @@ def train(args, model, optimizer):
     # log
     os.makedirs(f'{args.workdir}/logs', exist_ok=True)
     os.makedirs(f'{args.workdir}/checkpoint', exist_ok=True)
+    os.makedirs(f'{args.workdir}/sample', exist_ok=True)
     log = open(f'{args.workdir}/logs/{args.logfile}.txt', 'a')
     log_args = '========== Options ==========\n'
     args_var = vars(args)
@@ -210,7 +211,7 @@ def train(args, model, optimizer):
                 with torch.no_grad():
                     utils.save_image(
                         model_single.reverse(z_sample).cpu().data,
-                        f"sample/{str(i + 1).zfill(6)}.png",
+                        f"{args.workdir}/sample/{str(i + 1).zfill(6)}.png",
                         normalize=True,
                         nrow=10,
                         range=(-0.5, 0.5),
