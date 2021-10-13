@@ -75,7 +75,7 @@ def sample_data(path, batch_size, image_size):
 def sample_data_dots(path, batch_size, image_size):
     imgs = []
     labels = []
-    db_path = [os.path.join('data/dots/', '3_dots')]
+    db_path = [os.path.join('data/dots/', '6_dots')]
     db_files = [os.listdir(path) for path in db_path]
     for db_file in db_files[0]:
         filename = os.path.join(db_path[0], db_file)
