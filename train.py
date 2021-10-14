@@ -219,7 +219,7 @@ def train(args, model, optimizer):
                         range=(-0.5, 0.5),
                     )
 
-            if i % 1000 == 0:
+            if i % 10000 == 0:
                 torch.save(
                     model.state_dict(), f"{args.workdir}/checkpoint/model_{str(i + 1).zfill(6)}.pt"
                 )
