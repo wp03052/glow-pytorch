@@ -20,7 +20,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 parser = argparse.ArgumentParser(description="Glow trainer")
 
 parser.add_argument("--dataset", default='dots', type=str, help="dataset name")
-parser.add_argument('--noisy', type=bool, default='True')
+parser.add_argument(
+    "--noisy", action="store_true", help="noisy"
+)
 parser.add_argument("--n_dots", default=3, type=int, help="dataset selection for dots")
 
 parser.add_argument("--batch", default=16, type=int, help="batch size")
