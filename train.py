@@ -221,7 +221,7 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
 
             ####
             z_concat = model.module.z_outs_concat(z_outs)
-            z_concat = z_concat.view(z_concat.size(0), -1)
+            #z_concat = z_concat.view(z_concat.size(0), -1)
             d_z = discriminator(z_concat)
             loss_tc = (d_z[:, :1] - d_z[:, 1:]).mean()
             ####
@@ -245,8 +245,8 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
                 image2 = torch.floor(image2 / 2 ** (8 - args.n_bits))
 
             image2 = image2 / n_bins - 0.5
-            z_outs2 = model(image2 + torch.rand_like(image2) / n_bins, need_det=False)
-            z_prime = model.module.z_outs_concat(z_outs2)
+            z_prime = model(image2 + torch.rand_like(image2) / n_bins, need_det=False)
+            #z_prime = model.module.z_outs_concat(z_outs2)
             z_prime = z_prime.view(z_prime.size(0), -1)
             z_pperm = permute_dims(z_prime).detach()
             d_z_pperm = discriminator(z_pperm)

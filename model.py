@@ -372,6 +372,9 @@ class Glow(nn.Module):
 
             if log_p is not None:
                 log_p_sum = log_p_sum + log_p
+
+        z_outs = self.z_outs_concat(z_outs)
+
         if need_det:
             return log_p_sum, logdet, z_outs
         else:
