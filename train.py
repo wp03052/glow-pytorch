@@ -14,6 +14,8 @@ from torchvision import datasets, transforms, utils
 
 from datasets import Dots
 from model import Glow
+from discriminator import Discriminator
+import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -137,7 +139,20 @@ def calc_loss(log_p, logdet, image_size, n_bins):
     )
 
 
-def train(args, model, optimizer):
+def permute_dims(z):
+    assert z.dim() == 2
+
+    B, _ = z.size()
+    perm_z = []
+    for z_j in z.split(1, 1):
+        perm = torch.randperm(B).to(z.device)
+        perm_z_j = z_j[perm]
+        perm_z.append(perm_z_j)
+
+    return torch.cat(perm_z, 1)
+
+
+def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
 
     # log
     os.makedirs(f'{args.workdir}/logs', exist_ok=True)
@@ -164,6 +179,9 @@ def train(args, model, optimizer):
         z_new = torch.randn(args.n_sample, *z) * args.temp
         z_sample.append(z_new.to(device))
 
+    ones = torch.ones(args.batch, dtype=torch.long, device=device)
+    zeros = torch.zeros(args.batch, dtype=torch.long, device=device)
+
     with tqdm(range(args.iter)) as pbar:
         for i in pbar:
             image, _ = next(dataset)
@@ -188,27 +206,69 @@ def train(args, model, optimizer):
                 torch.save(
                     optimizer.state_dict(), f"{args.workdir}/checkpoint/optim_{str(i + 1).zfill(6)}.pt"
                 )
+                torch.save(
+                    discriminator.state_dict(), f"{args.workdir}/checkpoint/model_disc_{str(i + 1).zfill(6)}.pt"
+                )
+                torch.save(
+                    optimizer_disc.state_dict(), f"{args.workdir}/checkpoint/optim_disc_{str(i + 1).zfill(6)}.pt"
+                )
                 continue
 
             else:
-                log_p, logdet, _ = model(image + torch.rand_like(image) / n_bins)
+                log_p, logdet, z_outs = model(image + torch.rand_like(image) / n_bins)
 
             logdet = logdet.mean()
 
+            ####
+            z_concat = model.module.z_outs_concat(z_outs)
+            z_concat = z_concat.view(z_concat.size(0), -1)
+            d_z = discriminator(z_concat)
+            loss_tc = (d_z[:, :1] - d_z[:, 1:]).mean()
+            ####
+
             loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins)
+            loss = loss + loss_tc
             model.zero_grad()
-            loss.backward()
+            loss.backward(retain_graph=True)
             # warmup_lr = args.lr * min(1, i * batch_size / (50000 * 10))
             warmup_lr = args.lr
             optimizer.param_groups[0]["lr"] = warmup_lr
-            optimizer.step()
 
+
+            ####
+            image2, _ = next(dataset)
+            image2 = image2.to(device)
+
+            image2 = image2 * 255
+
+            if args.n_bits < 8:
+                image2 = torch.floor(image2 / 2 ** (8 - args.n_bits))
+
+            image2 = image2 / n_bins - 0.5
+            _, _, z_outs2 = model(image2 + torch.rand_like(image2) / n_bins, need_det=False)
+            z_prime = model.module.z_outs_concat(z_outs2)
+            z_prime = z_prime.view(z_prime.size(0), -1)
+            z_pperm = permute_dims(z_prime).detach()
+            d_z_pperm = discriminator(z_pperm)
+            loss_tc_disc = 0.5 * (F.cross_entropy(d_z, zeros) + F.cross_entropy(d_z_pperm, ones))
+
+            discriminator.zero_grad()
+            loss_tc_disc.backward()
+
+            optimizer.step()
+            optimizer_disc.step()
+            ####
+
+            # pbar.set_description(
+            #     f"Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}"
+            # )
             pbar.set_description(
-                f"Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}"
+                f"Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; loss_tc: {loss_tc.item():.5f}; loss_tc_disc: {loss_tc_disc.item():.5f}; lr: {warmup_lr:.7f}"
             )
 
             log = open(f'{args.workdir}/logs/{args.logfile}.txt', 'a')
-            log.write(f'Iter: {i+1:6d}; Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}\n')
+            # log.write(f'Iter: {i+1:6d}; Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}\n')
+            log.write(f'Iter: {i+1:6d}; Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; loss_tc: {loss_tc.item():.5f}; loss_tc_disc: {loss_tc_disc.item():.5f}; lr: {warmup_lr:.7f}\n')
             log.close()
 
             if i % 1000 == 0:
@@ -228,6 +288,12 @@ def train(args, model, optimizer):
                 torch.save(
                     optimizer.state_dict(), f"{args.workdir}/checkpoint/optim_{str(i + 1).zfill(6)}.pt"
                 )
+                torch.save(
+                    discriminator.state_dict(), f"{args.workdir}/checkpoint/model_disc_{str(i + 1).zfill(6)}.pt"
+                )
+                torch.save(
+                    optimizer_disc.state_dict(), f"{args.workdir}/checkpoint/optim_disc_{str(i + 1).zfill(6)}.pt"
+                )
 
 
 if __name__ == "__main__":
@@ -243,4 +309,9 @@ if __name__ == "__main__":
 
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-    train(args, model, optimizer)
+    discriminator = Discriminator(3 * args.img_size * args.img_size)
+    discriminator = nn.DataParallel(discriminator)
+    discriminator = discriminator.to(device)
+    optimizer_disc = optim.Adam(discriminator.parameters(), lr=args.lr)
+
+    train(args, model, optimizer, discriminator, optimizer_disc)

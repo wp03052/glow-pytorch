@@ -39,16 +39,18 @@ class ActNorm(nn.Module):
             self.loc.data.copy_(-mean)
             self.scale.data.copy_(1 / (std + 1e-6))
 
-    def forward(self, input):
+    def forward(self, input, need_det=True):
         _, _, height, width = input.shape
 
         if self.initialized.item() == 0:
             self.initialize(input)
             self.initialized.fill_(1)
 
-        log_abs = logabs(self.scale)
-
-        logdet = height * width * torch.sum(log_abs)
+        if need_det:
+            log_abs = logabs(self.scale)
+            logdet = height * width * torch.sum(log_abs)
+        else:
+            logdet = 0.
 
         if self.logdet:
             return self.scale * (input + self.loc), logdet
@@ -69,13 +71,16 @@ class InvConv2d(nn.Module):
         weight = q.unsqueeze(2).unsqueeze(3)
         self.weight = nn.Parameter(weight)
 
-    def forward(self, input):
+    def forward(self, input, need_det=True):
         _, _, height, width = input.shape
 
         out = F.conv2d(input, self.weight)
-        logdet = (
-            height * width * torch.slogdet(self.weight.squeeze().double())[1].float()
-        )
+        if need_det:
+            logdet = (
+                height * width * torch.slogdet(self.weight.squeeze().double())[1].float()
+            )
+        else:
+            logdet = 0.
 
         return out, logdet
 
@@ -111,13 +116,16 @@ class InvConv2dLU(nn.Module):
         self.w_s = nn.Parameter(logabs(w_s))
         self.w_u = nn.Parameter(w_u)
 
-    def forward(self, input):
+    def forward(self, input, need_det=True):
         _, _, height, width = input.shape
 
         weight = self.calc_weight()
 
         out = F.conv2d(input, weight)
-        logdet = height * width * torch.sum(self.w_s)
+        if need_det:
+            logdet = height * width * torch.sum(self.w_s)
+        else:
+            logdet = 0.
 
         return out, logdet
 
@@ -173,7 +181,7 @@ class AffineCoupling(nn.Module):
         self.net[2].weight.data.normal_(0, 0.05)
         self.net[2].bias.data.zero_()
 
-    def forward(self, input):
+    def forward(self, input, need_det=True):
         in_a, in_b = input.chunk(2, 1)
 
         if self.affine:
@@ -183,7 +191,10 @@ class AffineCoupling(nn.Module):
             # out_a = s * in_a + t
             out_b = (in_b + t) * s
 
-            logdet = torch.sum(torch.log(s).view(input.shape[0], -1), 1)
+            if need_det:
+                logdet = torch.sum(torch.log(s).view(input.shape[0], -1), 1)
+            else:
+                logdet = 0.
 
         else:
             net_out = self.net(in_a)
@@ -223,10 +234,10 @@ class Flow(nn.Module):
 
         self.coupling = AffineCoupling(in_channel, affine=affine)
 
-    def forward(self, input):
-        out, logdet = self.actnorm(input)
-        out, det1 = self.invconv(out)
-        out, det2 = self.coupling(out)
+    def forward(self, input, need_det=True):
+        out, logdet = self.actnorm(input, need_det)
+        out, det1 = self.invconv(out, need_det)
+        out, det2 = self.coupling(out, need_det)
 
         logdet = logdet + det1
         if det2 is not None:
@@ -268,7 +279,7 @@ class Block(nn.Module):
         else:
             self.prior = ZeroConv2d(in_channel * 4, in_channel * 8)
 
-    def forward(self, input):
+    def forward(self, input, need_det=True):
         b_size, n_channel, height, width = input.shape
         squeezed = input.view(b_size, n_channel, height // 2, 2, width // 2, 2)
         squeezed = squeezed.permute(0, 1, 3, 5, 2, 4)
@@ -277,7 +288,7 @@ class Block(nn.Module):
         logdet = 0
 
         for flow in self.flows:
-            out, det = flow(out)
+            out, det = flow(out, need_det)
             logdet = logdet + det
 
         if self.split:
@@ -292,6 +303,9 @@ class Block(nn.Module):
             log_p = gaussian_log_p(out, mean, log_sd)
             log_p = log_p.view(b_size, -1).sum(1)
             z_new = out
+
+        if not need_det:
+            assert logdet == 0.
 
         return out, logdet, log_p, z_new
 
@@ -345,14 +359,14 @@ class Glow(nn.Module):
             n_channel *= 2
         self.blocks.append(Block(n_channel, n_flow, split=False, affine=affine))
 
-    def forward(self, input):
+    def forward(self, input, need_det=True):
         log_p_sum = 0
         logdet = 0
         out = input
         z_outs = []
 
         for block in self.blocks:
-            out, det, log_p, z_new = block(out)
+            out, det, log_p, z_new = block(out, need_det)
             z_outs.append(z_new)
             logdet = logdet + det
 
