@@ -263,7 +263,7 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
             #     f"Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}"
             # )
             pbar.set_description(
-                f"Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; loss_tc: {loss_tc.item():.5f}; loss_tc_disc: {loss_tc_disc.item():.5f}; lr: {warmup_lr:.7f}"
+                f"Loss: {loss.item():.3f}; logP: {log_p.item():.3f}; logdet: {log_det.item():.3f}; loss_tc: {loss_tc.item():.3f}; loss_tc_disc: {loss_tc_disc.item():.3f}; lr: {warmup_lr:.5f}"
             )
 
             log = open(f'{args.workdir}/logs/{args.logfile}.txt', 'a')
