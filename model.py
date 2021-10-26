@@ -372,8 +372,10 @@ class Glow(nn.Module):
 
             if log_p is not None:
                 log_p_sum = log_p_sum + log_p
-
-        return log_p_sum, logdet, z_outs
+        if need_det:
+            return log_p_sum, logdet, z_outs
+        else:
+            return z_outs
 
     def reverse(self, z_list, reconstruct=False):
         for i, block in enumerate(self.blocks[::-1]):
