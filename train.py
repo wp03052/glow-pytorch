@@ -220,8 +220,8 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
             logdet = logdet.mean()
 
             ####
-            z_concat = model.module.z_outs_concat(z_outs)
-            #z_concat = z_concat.view(z_concat.size(0), -1)
+            #z_concat = model.module.z_outs_concat(z_outs)
+            z_concat = z_outs.view(z_outs.size(0), -1)
             d_z = discriminator(z_concat)
             loss_tc = (d_z[:, :1] - d_z[:, 1:]).mean()
             ####
