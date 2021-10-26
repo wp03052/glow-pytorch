@@ -169,6 +169,7 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
 
     if args.dataset == 'dots':
         dataset = iter(sample_data_dots(args.path, args.batch, args.img_size, args))
+        dataset2 = iter(sample_data_dots(args.path, args.batch, args.img_size, args))
     else:
         dataset = iter(sample_data(args.path, args.batch, args.img_size))
     n_bins = 2.0 ** args.n_bits
@@ -236,7 +237,7 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
 
 
             ####
-            image2, _ = next(dataset)
+            image2, _ = next(dataset2)
             image2 = image2.to(device)
 
             image2 = image2 * 255
