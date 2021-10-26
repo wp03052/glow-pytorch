@@ -169,7 +169,6 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
 
     if args.dataset == 'dots':
         dataset = iter(sample_data_dots(args.path, args.batch, args.img_size, args))
-        dataset2 = iter(sample_data_dots(args.path, args.batch, args.img_size, args))
     else:
         dataset = iter(sample_data(args.path, args.batch, args.img_size))
     n_bins = 2.0 ** args.n_bits
@@ -237,7 +236,7 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
 
 
             ####
-            image2, _ = next(dataset2)
+            image2, _ = next(dataset)
             image2 = image2.to(device)
 
             image2 = image2 * 255
@@ -246,7 +245,7 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
                 image2 = torch.floor(image2 / 2 ** (8 - args.n_bits))
 
             image2 = image2 / n_bins - 0.5
-            _, _, z_outs2 = model(image2 + torch.rand_like(image2) / n_bins, need_det=False)
+            log_p2, log_det2, z_outs2 = model(image2 + torch.rand_like(image2) / n_bins, need_det=False)
             z_prime = model.module.z_outs_concat(z_outs2)
             z_prime = z_prime.view(z_prime.size(0), -1)
             z_pperm = permute_dims(z_prime).detach()
