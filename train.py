@@ -250,6 +250,10 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
             z_prime = z_prime.view(z_prime.size(0), -1)
             z_pperm = permute_dims(z_prime).detach()
             d_z_pperm = discriminator(z_pperm)
+
+            import pdb
+            pdb.set_trace()
+
             loss_tc_disc = 0.5 * (F.cross_entropy(d_z, zeros) + F.cross_entropy(d_z_pperm, ones))
 
             discriminator.zero_grad()
@@ -312,6 +316,6 @@ if __name__ == "__main__":
     discriminator = Discriminator(3 * args.img_size * args.img_size)
     discriminator = nn.DataParallel(discriminator)
     discriminator = discriminator.to(device)
-    optimizer_disc = optim.Adam(discriminator.parameters(), lr=args.lr)
+    optimizer_disc = optim.Adam(discriminator.parameters(), lr=args.lr, betas=(0.5, 0.9))
 
     train(args, model, optimizer, discriminator, optimizer_disc)
