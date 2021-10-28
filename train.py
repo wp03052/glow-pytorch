@@ -227,7 +227,7 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
             ####
 
             loss, log_p, log_det = calc_loss(log_p, logdet, args.img_size, n_bins)
-            loss = loss + loss_tc
+            loss = loss + loss_tc / (np.log(2) * args.img_size * args.img_size * 3)
             model.zero_grad()
             loss.backward(retain_graph=True)
             # warmup_lr = args.lr * min(1, i * batch_size / (50000 * 10))
