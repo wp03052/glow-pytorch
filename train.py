@@ -251,9 +251,6 @@ def train(args, model, optimizer, discriminator=None, optimizer_disc=None):
             z_pperm = permute_dims(z_prime).detach()
             d_z_pperm = discriminator(z_pperm)
 
-            import pdb
-            pdb.set_trace()
-
             loss_tc_disc = 0.5 * (F.cross_entropy(d_z, zeros) + F.cross_entropy(d_z_pperm, ones))
 
             discriminator.zero_grad()
