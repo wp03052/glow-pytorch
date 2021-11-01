@@ -271,7 +271,7 @@ def train(args, model, optimizer):
             log.write(f'Iter: {i+1:6d}; Loss: {loss.item():.5f}; logP: {log_p.item():.5f}; logdet: {log_det.item():.5f}; lr: {warmup_lr:.7f}\n')
             log.close()
 
-            if i % 1000 == 0:
+            if i % 100 == 0:
                 with torch.no_grad():
                     utils.save_image(
                         model_single.reverse(z_sample).cpu().data,
@@ -281,7 +281,7 @@ def train(args, model, optimizer):
                         range=(-0.5, 0.5),
                     )
 
-            if i % 10000 == 0:
+            if i % 1000 == 0:
                 torch.save(
                     model.state_dict(), f"{args.workdir}/checkpoint/model_{str(i + 1).zfill(6)}.pt"
                 )
