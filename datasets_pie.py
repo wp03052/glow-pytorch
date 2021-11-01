@@ -118,7 +118,8 @@ class PieDataset():
             self.train_ptr = batch_size
         while self.train_ptr > len(self.train_cache):
             self.train_cache.append(gen_pie(np.random.choice(self.params)))
-        return np.stack(self.train_cache[prev_ptr:self.train_ptr], axis=0)
+        out = np.stack(self.train_cache[prev_ptr:self.train_ptr], axis=0)
+        return torch.FloatTensor(out)
 
     def reset(self):
         self.train_ptr = 0
