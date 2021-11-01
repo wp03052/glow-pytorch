@@ -214,7 +214,7 @@ def train(args, model, optimizer):
     with tqdm(range(args.iter)) as pbar:
         for i in pbar:
             if 'pie' in args.dataset:
-                image = dataset.next_batch(args.batch)
+                image, _ = dataset.next_batch(args.batch)
             else:
                 image, _ = next(dataset)
             image = image.to(device)
