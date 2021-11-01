@@ -109,7 +109,7 @@ def sample_data_dots(path, batch_size, image_size, args):
             yield next(loader)
 
 
-def sample_data_pie(batch_size,  args):
+def sample_data_pie(args):
     splited = args.dataset.split('_')
     num_params = int(splited[1])
 
@@ -150,20 +150,7 @@ def sample_data_pie(batch_size,  args):
         params.append(param)
 
     dataset = PieDataset(params=params)
-
-    loader = DataLoader(dataset, shuffle=True, batch_size=batch_size, num_workers=4)
-    loader = iter(loader)
-
-    while True:
-        try:
-            yield next(loader)
-
-        except StopIteration:
-            loader = DataLoader(
-                dataset, shuffle=True, batch_size=batch_size, num_workers=4
-            )
-            loader = iter(loader)
-            yield next(loader)
+    return dataset
 
 
 def calc_z_shapes(n_channel, input_size, n_flow, n_block):
@@ -212,8 +199,8 @@ def train(args, model, optimizer):
 
     if args.dataset == 'dots':
         dataset = iter(sample_data_dots(args.path, args.batch, args.img_size, args))
-    elif 'pie'in args.dataset:
-        dataset = iter(sample_data_pie(args.batch, args))
+    elif 'pie' in args.dataset:
+        dataset = sample_data_pie(args)
     else:
         dataset = iter(sample_data(args.path, args.batch, args.img_size))
     n_bins = 2.0 ** args.n_bits
@@ -226,7 +213,10 @@ def train(args, model, optimizer):
 
     with tqdm(range(args.iter)) as pbar:
         for i in pbar:
-            image, _ = next(dataset)
+            if 'pie' in args.dataset:
+                image = dataset.next_batch(args.batch)
+            else:
+                image, _ = next(dataset)
             image = image.to(device)
 
             image = image * 255

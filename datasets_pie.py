@@ -91,29 +91,47 @@ def gen_pie(params):
     return canvas, color
 
 
-class PieDataset(torch.utils.data.Dataset):
-    def __init__(self, params=('40000',), len=32):
+class PieDataset():
+    def __init__(self, params=('40000',)):
         """ params is a tuple of strings, each string contain five integers,
         representing [num-of-color, size, x-location, y-location, proportion-of-red];
         each value is from 1-9, if value is 0, than this dimension is randomly selected.
         For data point selects a random param"""
-
+        self.data_dims = [64, 64, 3]
+        self.name = "pie"
+        self.batch_size = 100
         self.params = params
-        self.len = len
 
-    def gen_pies(self):
-        dataset = []
-        labels = []
-        for i in range(self.len):
-            canvas, color = gen_pie(self.params)
-            dataset.append(canvas)
-            labels.append(color)
-        return dataset, labels
+        self.train_ptr = 0
+        self.train_cache = []
+        self.max_size = 200000
 
-    def __getitem__(self, index):
-        dataset, labels = self.gen_pies()
-        return (dataset[index], labels[index])
+        self.range = [0.0, 1.0]
 
-    def __len__(self):
-        return self.len
+    def next_batch(self, batch_size=None):
+        if batch_size is None:
+            batch_size = self.batch_size
+        prev_ptr = self.train_ptr
+        self.train_ptr += batch_size
+        if self.train_ptr > self.max_size:
+            prev_ptr = 0
+            self.train_ptr = batch_size
+        while self.train_ptr > len(self.train_cache):
+            self.train_cache.append(gen_pie(np.random.choice(self.params)))
+        return np.stack(self.train_cache[prev_ptr:self.train_ptr], axis=0)
+
+    def reset(self):
+        self.train_ptr = 0
+
+    @staticmethod
+    def eval_size(arr):
+        return np.array([compute_radius(img) for img in arr])
+
+    @staticmethod
+    def eval_color_proportion(arr):
+        return np.array([compute_proportion(img) for img in arr])
+
+    @staticmethod
+    def eval_location(arr):
+        return np.stack([compute_location(img) for img in arr], axis=0)
     
